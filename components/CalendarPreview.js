@@ -1,23 +1,27 @@
 'use client'
 import { getTierBadge, assessActualVsEstimate } from '@/lib/calendarUtils'
 
+const BORDER_BY_TIER = {
+  mag7:       'border-terminal-green',
+  fomc:       'border-terminal-purple',
+  fed_minutes:'border-terminal-purple',
+  fed_speaker:'border-purple-400',
+  tier1:      'border-terminal-gold',
+  opex:       'border-terminal-orange',
+  tier2:      'border-terminal-cyan',
+  tier3:      'border-terminal-muted',
+}
+
 function EventCard({ event }) {
   const badge = getTierBadge(event.tier)
+  const borderColor = BORDER_BY_TIER[event.tier] || 'border-terminal-muted'
   const sentiment = event.actual != null && event.estimate != null
     ? assessActualVsEstimate(event.actual, event.estimate)
     : null
-
-  const borderColor = {
-    tier1: 'border-terminal-gold',
-    tier2: 'border-terminal-cyan',
-    fomc: 'border-terminal-purple',
-    tier3: 'border-terminal-muted',
-  }[event.tier] || 'border-terminal-muted'
-
   const sentimentColor = {
-    HOT: 'text-terminal-red bg-terminal-red/10',
-    COOL: 'text-terminal-green bg-terminal-green/10',
-    'IN-LINE': 'text-terminal-muted bg-terminal-muted/10',
+    HOT:      'text-terminal-red bg-terminal-red/10',
+    COOL:     'text-terminal-green bg-terminal-green/10',
+    'IN-LINE':'text-terminal-muted bg-terminal-muted/10',
   }[sentiment] || ''
 
   return (
@@ -26,7 +30,7 @@ function EventCard({ event }) {
         <div className="flex-1 min-w-0">
           <p className="text-terminal-text text-xs font-medium leading-tight">{event.name}</p>
           <p className="text-terminal-muted text-[10px] mt-0.5">
-            {event.timeCT} CT / {event.timeET} ET
+            {event.timeCT !== 'TBA' ? `${event.timeCT} CT / ${event.timeET} ET` : event.timeET}
           </p>
         </div>
         <span className={`text-[9px] font-bold px-1.5 py-0.5 shrink-0 ${badge.color}`}>
@@ -36,7 +40,7 @@ function EventCard({ event }) {
 
       <div className="grid grid-cols-3 gap-1 text-[10px]">
         <div>
-          <span className="text-terminal-muted block">CONS</span>
+          <span className="text-terminal-muted block">CONS/EST</span>
           <span className="text-terminal-text">{event.estimate ?? '—'}</span>
         </div>
         <div>
@@ -52,20 +56,33 @@ function EventCard({ event }) {
       </div>
 
       {sentiment && (
-        <div className={`text-[9px] font-bold px-2 py-0.5 inline-block ${sentimentColor}`}>
+        <span className={`text-[9px] font-bold px-2 py-0.5 inline-block ${sentimentColor}`}>
           {sentiment}
-        </div>
+        </span>
       )}
     </div>
   )
 }
 
+const SECTIONS = [
+  { key: 'mag7',        label: 'MAG7 EARNINGS',  labelColor: 'text-terminal-green' },
+  { key: 'fomc',        label: 'FOMC',            labelColor: 'text-terminal-purple' },
+  { key: 'fed_minutes', label: 'FED MINUTES',     labelColor: 'text-terminal-purple' },
+  { key: 'fed_speaker', label: 'FED SPEAKER',     labelColor: 'text-purple-400' },
+  { key: 'tier1',       label: 'TIER 1',          labelColor: 'text-terminal-gold' },
+  { key: 'opex',        label: 'OPTIONS EXPIRATION', labelColor: 'text-terminal-orange' },
+  { key: 'tier2',       label: 'TIER 2',          labelColor: 'text-terminal-cyan' },
+  { key: 'tier3',       label: 'SECONDARY',       labelColor: 'text-terminal-muted' },
+]
+
 export default function CalendarPreview({ events, onGenerateBrief, isGenerating }) {
   if (!events || events.length === 0) return null
 
-  const tier1 = events.filter(e => e.tier === 'tier1')
-  const fomc = events.filter(e => e.tier === 'fomc')
-  const other = events.filter(e => e.tier !== 'tier1' && e.tier !== 'fomc')
+  const byTier = {}
+  for (const ev of events) {
+    if (!byTier[ev.tier]) byTier[ev.tier] = []
+    byTier[ev.tier].push(ev)
+  }
 
   return (
     <div className="space-y-4">
@@ -74,36 +91,22 @@ export default function CalendarPreview({ events, onGenerateBrief, isGenerating 
           ECONOMIC CALENDAR
         </h2>
         <span className="text-terminal-muted text-[10px]">
-          {events.length} US EVENTS
+          {events.length} EVENTS
         </span>
       </div>
 
-      {fomc.length > 0 && (
-        <div>
-          <p className="text-terminal-purple text-[10px] font-bold tracking-widest mb-2">◆ FOMC</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {fomc.map((ev, i) => <EventCard key={i} event={ev} />)}
+      {SECTIONS.map(({ key, label, labelColor }) => {
+        const evs = byTier[key]
+        if (!evs || evs.length === 0) return null
+        return (
+          <div key={key}>
+            <p className={`${labelColor} text-[10px] font-bold tracking-widest mb-2`}>◆ {label}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {evs.map((ev, i) => <EventCard key={i} event={ev} />)}
+            </div>
           </div>
-        </div>
-      )}
-
-      {tier1.length > 0 && (
-        <div>
-          <p className="text-terminal-gold text-[10px] font-bold tracking-widest mb-2">◆ TIER 1</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {tier1.map((ev, i) => <EventCard key={i} event={ev} />)}
-          </div>
-        </div>
-      )}
-
-      {other.length > 0 && (
-        <div>
-          <p className="text-terminal-cyan text-[10px] font-bold tracking-widest mb-2">◆ SECONDARY</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {other.map((ev, i) => <EventCard key={i} event={ev} />)}
-          </div>
-        </div>
-      )}
+        )
+      })}
 
       <div className="pt-2">
         <button

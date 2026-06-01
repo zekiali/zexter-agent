@@ -2,11 +2,12 @@
 import { assessActualVsEstimate } from '@/lib/calendarUtils'
 
 const DAY_TYPE_CONFIG = {
-  'A+': { color: 'text-terminal-gold', bg: 'bg-terminal-gold/10', border: 'border-terminal-gold', glow: 'glow-gold', label: 'A+ DAY' },
-  'A':  { color: 'text-terminal-green', bg: 'bg-terminal-green/10', border: 'border-terminal-green', glow: 'glow-green', label: 'A DAY' },
-  'B':  { color: 'text-terminal-cyan', bg: 'bg-terminal-cyan/10', border: 'border-terminal-cyan', glow: 'glow-cyan', label: 'B DAY' },
-  'C':  { color: 'text-terminal-muted', bg: 'bg-terminal-muted/10', border: 'border-terminal-muted', glow: '', label: 'C DAY' },
-  'F':  { color: 'text-terminal-red', bg: 'bg-terminal-red/10', border: 'border-terminal-red', glow: 'glow-red', label: 'F — FOMC' },
+  'A+':  { color: 'text-terminal-gold',   bg: 'bg-terminal-gold/10',   border: 'border-terminal-gold',   glow: 'glow-gold',  label: 'A+ DAY' },
+  'A':   { color: 'text-terminal-green',  bg: 'bg-terminal-green/10',  border: 'border-terminal-green',  glow: 'glow-green', label: 'A DAY' },
+  'B':   { color: 'text-terminal-cyan',   bg: 'bg-terminal-cyan/10',   border: 'border-terminal-cyan',   glow: 'glow-cyan',  label: 'B DAY' },
+  'C':   { color: 'text-terminal-muted',  bg: 'bg-terminal-muted/10',  border: 'border-terminal-muted',  glow: '',           label: 'C DAY' },
+  'F':   { color: 'text-terminal-red',    bg: 'bg-terminal-red/10',    border: 'border-terminal-red',    glow: 'glow-red',   label: 'F — FOMC' },
+  'MAG7':{ color: 'text-terminal-green',  bg: 'bg-terminal-green/10',  border: 'border-terminal-green',  glow: 'glow-green', label: 'MAG7 EARNINGS' },
 }
 
 const PRIORITY_CONFIG = {
@@ -82,11 +83,15 @@ function CatalystCard({ catalyst }) {
   const sc = sentimentConfig[sentiment] || null
 
   const tierLabel = {
-    tier1: { text: 'TIER 1', color: 'text-terminal-gold' },
-    tier2: { text: 'TIER 2', color: 'text-terminal-cyan' },
-    fomc: { text: 'FOMC', color: 'text-terminal-purple' },
-    tier3: { text: 'TIER 3', color: 'text-terminal-muted' },
-    none: { text: 'NO CATALYST', color: 'text-terminal-muted' },
+    tier1:       { text: 'TIER 1',       color: 'text-terminal-gold' },
+    tier2:       { text: 'TIER 2',       color: 'text-terminal-cyan' },
+    fomc:        { text: 'FOMC',         color: 'text-terminal-purple' },
+    fed_minutes: { text: 'FED MINUTES',  color: 'text-terminal-purple' },
+    fed_speaker: { text: 'FED SPEAKER',  color: 'text-purple-400' },
+    opex:        { text: 'OPEX',         color: 'text-terminal-orange' },
+    mag7:        { text: 'MAG7',         color: 'text-terminal-green' },
+    tier3:       { text: 'TIER 3',       color: 'text-terminal-muted' },
+    none:        { text: 'NO CATALYST',  color: 'text-terminal-muted' },
   }[catalyst.impactLevel] || { text: '—', color: 'text-terminal-muted' }
 
   return (
