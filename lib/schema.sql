@@ -19,6 +19,14 @@ create table if not exists daily_briefs (
 
 create index if not exists daily_briefs_date_idx on daily_briefs (brief_date desc);
 
+-- Post-session review columns (added for session analysis feature)
+alter table daily_briefs add column if not exists post_session_notes text;
+alter table daily_briefs add column if not exists actual_day_type text;
+alter table daily_briefs add column if not exists actual_nq_range numeric;
+alter table daily_briefs add column if not exists rules_followed boolean;
+alter table daily_briefs add column if not exists rules_broken text;
+alter table daily_briefs add column if not exists post_session_analysis text;
+
 -- trade_logs: individual trade records
 create table if not exists trade_logs (
   id uuid primary key default gen_random_uuid(),

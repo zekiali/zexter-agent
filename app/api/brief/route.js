@@ -21,6 +21,28 @@ DAY TYPES:
 - C: No catalyst, quiet → 0 contracts, do not trade
 - F: FOMC decision day → 0 until 1PM CT, then FOMC protocol
 
+ISM BEAT THRESHOLD RULES:
+- ISM beats consensus by 0.5-1.0 pts → automatic B-day upgrade
+- ISM beats consensus by >1.0 pts → evaluate A-day
+- ISM misses consensus by >0.5 pts → bearish B-day
+- ISM misses by >1.0 pts → C-day with downside risk
+- NEVER classify a day as C when ISM has beat by >0.5 pts
+
+PMI CONFLUENCE RULE:
+When S&P Global PMI (8:45 AM CT) AND ISM PMI (9:00 AM CT) both beat consensus on the same morning, treat as B or A day regardless of other factors. Two manufacturing beats = institutional confirmation. Primary entry window on PMI beat days: 9:00-9:30 AM CT post-ISM.
+
+CONFLUENCE DETECTION RULE:
+When 3 or more of these are simultaneously true, upgrade day type by one level (C→B, B→A):
+- PMI beat (either S&P Global or ISM)
+- Oil declining (geopolitical de-escalation)
+- Markets at or near all-time highs
+- Positive AI/tech earnings catalyst in last 48 hours
+- Geopolitical de-escalation headline active
+If confluence detected, populate the confluenceAlert JSON field with summary, factors array, and upgradeApplied string. Also add "CONFLUENCE DETECTED — MULTIPLE SIGNALS" to warningFlags.
+
+FOMC MEETING UPCOMING RULE:
+When FOMC is scheduled within 2 weeks, note in the brief that positioning may be capped — institutions hedge before FOMC. Add this awareness to all briefs during FOMC window periods.
+
 CATALYST TIERS:
 
 TIER 1 (8:30 AM ET / 7:30 AM CT):
@@ -67,6 +89,25 @@ TIME WINDOWS BY CATALYST:
 - 2:30 PM CT: Powell press conference (F-days) — real move starts here
 - All day (OpEx): Monitor final hour 2-3PM CT for options-driven moves
 
+HISTORICAL NQ STATS BY CATALYST TYPE:
+
+ISM BEAT DAYS (actual beat >0.5 pts):
+- Average NQ move first 30 min after release: +100-200 pts
+- Strongest moves when beat >1.0 pts: +150-300 pts
+- Primary entry window: 9:00-9:30 AM CT (post-ISM reaction)
+- Confirmation signal: RVOL expanding on the 9:00 AM CT candle
+- Entry setup: VWAP reclaim / slow accumulation after initial spike
+
+ISM MISS DAYS (actual miss >0.5 pts):
+- Average NQ move first 30 min: -100-180 pts
+- Direction: bearish on growth concerns
+- Caution: ISM miss + oil rising = double pressure on NQ
+
+PMI CONFLUENCE DAYS (both S&P Global AND ISM beat):
+- Historically produce sustained directional moves (not spike-and-fade)
+- Moves often extend 2-4 hours after initial reaction
+- Case study June 1 2026: ISM 54.0 vs 52.6 consensus (+1.4) = 300pt sustained move
+
 IMPORTANT:
 - Economic calendar data is provided from Finnhub API in the user message. DO NOT search for it.
 - Use web search for: NQ overnight performance, any Mag7 earnings that reported after close yesterday, any breaking geopolitical news.
@@ -108,6 +149,7 @@ Return VALID JSON ONLY — no markdown, no backticks:
   "mag7EarningsAlert": null,
   "opexAlert": null,
   "geopoliticalAlert": null,
+  "confluenceAlert": null,
   "timeWindows": [
     {"timeCT":"string","label":"string","priority":"critical|high|medium|low|avoid","note":"string"}
   ],
@@ -149,34 +191,49 @@ export async function POST(request) {
 
     const calendarText = calendarEvents.length > 0
       ? `\n\nTODAY'S ECONOMIC + EARNINGS CALENDAR (already fetched from Finnhub — do NOT search for this):\n${JSON.stringify(calendarEvents, null, 2)}`
-      : `\n\nFinnhub returned no calendar data. Search for today's economic data using these specific sources:
+      : `\n\nFinnhub returned no calendar data. IMPORTANT: Search specifically for the following in order:
 
-1. Search: 'site:forexfactory.com economic calendar ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}' — get all US releases today with consensus and prior values
+1. Search: 'site:forexfactory.com economic calendar ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}' — get ALL US releases today with consensus and prior values
 
-2. Search: 'site:ismworld.org ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026 manufacturing PMI' if today is first Monday of month
+2. Check if today is the first Monday or first Wednesday of the month — if so, search: 'ISM Manufacturing PMI ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026 consensus' and 'site:ismworld.org' for the official print
 
-3. Search: 'site:bls.gov ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026' if CPI, PPI, or NFP expected today
+3. Search: 'site:bls.gov ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026' if CPI, PPI, or NFP is expected today
 
-4. Search: 'NQ futures overnight ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} barchart' for precise overnight performance
+4. Search: 'NQ futures overnight ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} barchart' for precise overnight performance and gap from yesterday's close
 
-5. Search: 'site:federalreserve.gov FOMC calendar 2026' to confirm upcoming Fed meeting dates
+5. Search: 'site:federalreserve.gov FOMC calendar 2026' to confirm upcoming Fed meeting dates and whether we are within 2 weeks of FOMC
 
 6. Search: 'site:cmegroup.com fedwatch' for current Fed rate cut probability
 
+7. Search for any earnings from NVDA, MSFT, AAPL, META, GOOGL, AMZN, TSLA reported after yesterday's close
+
+8. Check whether today is the 3rd Friday of the month (OpEx day)
+
 Extract from these searches:
 - Every US economic release today with exact time (ET and CT)
-- Consensus estimate for each release
-- Prior value for each release
+- Consensus AND prior value for each release
 - Actual value if already released
-- NQ overnight range and current price
+- NQ overnight range, current price, and gap from yesterday's close
 - Any active geopolitical headlines affecting markets
 
 Return all of this as structured data in the JSON response.`
 
+    // Extract ISM event for explicit threshold highlighting
+    const ismEvent = calendarEvents.find(ev => /\bism\b/i.test(ev.name || ''))
+    const ismHighlight = ismEvent
+      ? `\n\nISM EVENT DETECTED — APPLY BEAT THRESHOLD RULES:
+Event: ${ismEvent.name}
+Time: ${ismEvent.timeET || '10:00 AM ET'} / ${ismEvent.timeCT || '9:00 AM CT'}
+Consensus: ${ismEvent.consensus || 'not available'}
+Prior: ${ismEvent.prior || 'not available'}
+Actual: ${ismEvent.actual || 'not yet released'}
+RULE: If actual beats consensus by >0.5 pts → B-day minimum. If beat >1.0 pts → evaluate A-day. NEVER classify C-day if ISM beats by >0.5 pts.`
+      : ''
+
     const userMessage = `Generate a pre-market intelligence brief for MNQ/NQ trading.
 Date: ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}
 Time of generation: ${time || new Date().toLocaleTimeString('en-US', { timeZone: 'America/Chicago' })} CT
-${calendarText}
+${calendarText}${ismHighlight}
 
 Use web search to check: (1) NQ/ES overnight futures performance and current level, (2) any Mag7 earnings reported after close last night, (3) any breaking geopolitical or macro news that could affect NQ today. Return only valid JSON as specified.`
 
