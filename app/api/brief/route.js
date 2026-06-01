@@ -142,7 +142,7 @@ export async function POST(request) {
 
     const calendarText = calendarEvents.length > 0
       ? `\n\nTODAY'S ECONOMIC + EARNINGS CALENDAR (already fetched from Finnhub — do NOT search for this):\n${JSON.stringify(calendarEvents, null, 2)}`
-      : "\n\nNo calendar data provided — use web search to find today's economic events and any Mag7 earnings."
+      : "\n\nNo calendar data was pre-fetched. Search the web for today's complete US economic calendar including all releases, times, consensus estimates, and prior values. Also search for NQ overnight performance."
 
     const userMessage = `Generate a pre-market intelligence brief for MNQ/NQ trading.
 Date: ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}
@@ -165,24 +165,36 @@ Use web search to check: (1) NQ/ES overnight futures performance and current lev
       messages: [{ role: 'user', content: userMessage }],
     })
 
-    // Extract text blocks only
-    let rawText = ''
-    for (const block of response.content) {
-      if (block.type === 'text') rawText += block.text
+    // Extract JSON from response regardless of formatting
+    const text = response.content
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('')
+
+    // Strip markdown code blocks if present
+    const cleaned = text
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim()
+
+    // Find the JSON object — look for first { to last }
+    const start = cleaned.indexOf('{')
+    const end = cleaned.lastIndexOf('}')
+
+    if (start === -1 || end === -1) {
+      return NextResponse.json(
+        { error: 'No JSON object found in AI response', raw: text },
+        { status: 500 }
+      )
     }
 
-    // Strip accidental markdown fences and parse JSON
+    const jsonStr = cleaned.substring(start, end + 1)
     let parsed
     try {
-      const cleaned = rawText
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```\s*$/i, '')
-        .trim()
-      parsed = JSON.parse(cleaned)
+      parsed = JSON.parse(jsonStr)
     } catch {
       return NextResponse.json(
-        { error: 'Failed to parse AI response as JSON', raw: rawText },
+        { error: 'Failed to parse AI response as JSON', raw: text },
         { status: 500 }
       )
     }

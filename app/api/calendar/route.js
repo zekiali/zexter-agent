@@ -81,6 +81,18 @@ export async function GET() {
       return new Date(a.rawTime) - new Date(b.rawTime)
     })
 
+    if (allEvents.length === 0) {
+      return NextResponse.json({
+        events: [],
+        source: 'empty',
+        message: 'No Finnhub events found — brief will use web search',
+        fetchedAt: new Date().toISOString(),
+        tradingDate: etDate,
+        isOpExDay: false,
+        mag7Today: [],
+      })
+    }
+
     return NextResponse.json({
       events: allEvents,
       fetchedAt: new Date().toISOString(),

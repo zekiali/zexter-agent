@@ -178,11 +178,19 @@ export default function Dashboard() {
               <span className="text-terminal-gold text-xs tracking-wider">FETCHING CALENDAR FROM FINNHUB...</span>
             </>
           )}
-          {calendarStatus === 'loaded' && (
+          {calendarStatus === 'loaded' && calendarEvents.length > 0 && (
             <>
               <span className="h-2 w-2 rounded-full bg-terminal-green" />
               <span className="text-terminal-green text-xs tracking-wider">
                 CALENDAR LOADED — {calendarEvents.length} US EVENTS (FINNHUB)
+              </span>
+            </>
+          )}
+          {calendarStatus === 'loaded' && calendarEvents.length === 0 && (
+            <>
+              <span className="h-2 w-2 rounded-full bg-terminal-gold" />
+              <span className="text-terminal-gold text-xs tracking-wider">
+                FINNHUB: 0 EVENTS — BRIEF WILL USE WEB SEARCH
               </span>
             </>
           )}
