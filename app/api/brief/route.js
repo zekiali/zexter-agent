@@ -112,6 +112,7 @@ Return VALID JSON ONLY — no markdown, no backticks:
     "rvolThreshold": 4.0,
     "mcdxThreshold": 15,
     "maxTrades": 3,
+    "dailyMaxLoss": 200,
     "tradingWindow": "string",
     "pmReentry": false,
     "pmReentryNote": null

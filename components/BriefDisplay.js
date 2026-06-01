@@ -198,6 +198,8 @@ function TradeParamsCard({ params, dayType }) {
   if (!params) return null
   const cfg = DAY_TYPE_CONFIG[dayType] || DAY_TYPE_CONFIG['C']
   const dollarPerPt = (params.contracts || 0) * 2
+  const dailyMaxLoss = params.dailyMaxLoss
+    ?? ({ 'A+': 200, 'A': 200, 'B': 100 }[dayType] ?? null)
 
   return (
     <div className="card p-6 space-y-4">
@@ -223,11 +225,12 @@ function TradeParamsCard({ params, dayType }) {
           { label: 'MAX TRADES', value: params.maxTrades || 3 },
           { label: 'TRAIL AFTER', value: `${params.trailAfterPts || 70} pts` },
           { label: '$/PT VALUE', value: `$${dollarPerPt}` },
+          { label: 'DAILY MAX LOSS', value: dailyMaxLoss != null ? `$${dailyMaxLoss}` : 'N/A' },
           { label: 'TRADING WINDOW', value: params.tradingWindow || '8:30–10:00 CT' },
         ].map(({ label, value }) => (
-          <div key={label} className="flex items-center justify-between bg-terminal-bg border border-terminal-border px-3 py-2">
-            <span className="text-terminal-muted text-[9px] tracking-wider">{label}</span>
-            <span className="text-terminal-text font-medium text-[10px]">{value}</span>
+          <div key={label} className={`flex items-center justify-between bg-terminal-bg border px-3 py-2 ${label === 'DAILY MAX LOSS' ? 'border-terminal-red/40' : 'border-terminal-border'}`}>
+            <span className={`text-[9px] tracking-wider ${label === 'DAILY MAX LOSS' ? 'text-terminal-red' : 'text-terminal-muted'}`}>{label}</span>
+            <span className={`font-medium text-[10px] ${label === 'DAILY MAX LOSS' ? 'text-terminal-red font-bold' : 'text-terminal-text'}`}>{value}</span>
           </div>
         ))}
       </div>
