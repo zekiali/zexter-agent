@@ -16,6 +16,132 @@ import {
   OvernightCard,
 } from '@/components/BriefDisplay'
 
+function PostSessionReview({
+  review, setReview,
+  isSavingReview, reviewSaved, reviewError,
+  isAnalyzing, sessionAnalysis, analyzeError,
+  saveReview, analyzeSession,
+  todayCT, noBrief,
+}) {
+  const formattedDate = new Date(todayCT + 'T12:00:00').toLocaleDateString('en-US', {
+    month: 'long', day: 'numeric', year: 'numeric',
+  })
+  return (
+    <div className="card border-terminal-purple border p-6 space-y-4">
+      <p className="text-terminal-purple text-[10px] tracking-widest font-bold">◆ POST-SESSION REVIEW</p>
+      {noBrief && (
+        <p className="text-terminal-muted text-xs">No brief was generated today — you can still log a manual review.</p>
+      )}
+
+      <div className="space-y-3">
+        <div>
+          <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">WHAT ACTUALLY HAPPENED TODAY</label>
+          <textarea
+            value={review.notes}
+            onChange={e => setReview(r => ({ ...r, notes: e.target.value }))}
+            rows={4}
+            placeholder="Describe what the market did, any catalysts that played out, how NQ moved..."
+            className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple resize-none"
+          />
+        </div>
+
+        <div>
+          <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">RULES FOLLOWED?</label>
+          <div className="flex gap-2">
+            {[{ val: true, label: 'YES', cls: 'border-terminal-green text-terminal-green bg-terminal-green/10' },
+              { val: false, label: 'NO', cls: 'border-terminal-red text-terminal-red bg-terminal-red/10' }].map(({ val, label, cls }) => (
+              <button
+                key={label}
+                onClick={() => setReview(r => ({ ...r, rulesFollowed: r.rulesFollowed === val ? null : val }))}
+                className={`px-4 py-1.5 border text-xs font-bold tracking-widest transition-colors ${
+                  review.rulesFollowed === val ? cls : 'border-terminal-border text-terminal-muted hover:border-terminal-muted'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">RULES BROKEN (if any)</label>
+          <textarea
+            value={review.rulesBroken}
+            onChange={e => setReview(r => ({ ...r, rulesBroken: e.target.value }))}
+            rows={2}
+            placeholder="List any rules broken today..."
+            className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple resize-none"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL DAY TYPE (HINDSIGHT)</label>
+            <select
+              value={review.actualDayType}
+              onChange={e => setReview(r => ({ ...r, actualDayType: e.target.value }))}
+              className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-2 py-1.5 text-xs focus:outline-none focus:border-terminal-purple"
+            >
+              <option value="">Select...</option>
+              {['A+', 'A', 'B', 'C', 'Missed Opportunity'].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL NQ RANGE (PTS)</label>
+            <input
+              type="number"
+              value={review.actualNQRange}
+              onChange={e => setReview(r => ({ ...r, actualNQRange: e.target.value }))}
+              placeholder="300"
+              className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple"
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={saveReview}
+            disabled={isSavingReview}
+            className="flex-1 py-2 bg-terminal-surface border border-terminal-purple text-terminal-purple text-xs font-bold tracking-widest hover:bg-terminal-purple/10 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isSavingReview && <span className="w-3 h-3 border border-terminal-purple/40 border-t-terminal-purple rounded-full animate-spin" />}
+            {isSavingReview ? 'SAVING...' : '◆ SAVE REVIEW'}
+          </button>
+          <button
+            onClick={analyzeSession}
+            disabled={isAnalyzing}
+            className="flex-1 py-2 bg-terminal-purple text-white text-xs font-bold tracking-widest hover:bg-terminal-purple/90 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {isAnalyzing && <span className="w-3 h-3 border border-white/40 border-t-white rounded-full animate-spin" />}
+            {isAnalyzing ? 'ANALYZING...' : '◆ ANALYZE SESSION'}
+          </button>
+        </div>
+
+        {reviewSaved && (
+          <p className="text-terminal-green text-xs font-bold tracking-wider">
+            ◆ REVIEW SAVED — {formattedDate}
+          </p>
+        )}
+        {reviewError && (
+          <p className="text-terminal-red text-xs">✗ SAVE FAILED: {reviewError}</p>
+        )}
+      </div>
+
+      {(sessionAnalysis || analyzeError) && (
+        <div className="border-t border-terminal-border pt-4 space-y-3">
+          <p className="text-terminal-purple text-[10px] tracking-widest font-bold">SESSION ANALYSIS</p>
+          {analyzeError && <p className="text-terminal-red text-xs">✗ {analyzeError}</p>}
+          {sessionAnalysis && sessionAnalysis.split('\n').filter(p => p.trim()).map((p, i) => (
+            <p key={i} className="text-terminal-text text-sm leading-relaxed">{p}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-16">
@@ -42,11 +168,13 @@ export default function Dashboard() {
   const [mcdx, setMcdx] = useState('')
   const [checklist, setChecklist] = useState({})
   const [isAfterPM, setIsAfterPM] = useState(false)
-  const [review, setReview] = useState({ notes: '', rulesBroken: '', actualDayType: '', actualNQRange: '' })
+  const [review, setReview] = useState({ notes: '', rulesBroken: '', rulesFollowed: null, actualDayType: '', actualNQRange: '' })
   const [isSavingReview, setIsSavingReview] = useState(false)
   const [reviewSaved, setReviewSaved] = useState(false)
+  const [reviewError, setReviewError] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [sessionAnalysis, setSessionAnalysis] = useState(null)
+  const [analyzeError, setAnalyzeError] = useState(null)
 
   // Today's date in CT
   const todayCT = new Intl.DateTimeFormat('en-CA', {
@@ -122,6 +250,8 @@ export default function Dashboard() {
 
   async function saveReview() {
     setIsSavingReview(true)
+    setReviewError(null)
+    setReviewSaved(false)
     try {
       const res = await fetch('/api/review', {
         method: 'POST',
@@ -129,10 +259,10 @@ export default function Dashboard() {
         body: JSON.stringify({ briefId, date: todayCT, ...review }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.error || 'Save failed')
       setReviewSaved(true)
     } catch (e) {
-      alert('Save failed: ' + e.message)
+      setReviewError(e.message)
     } finally {
       setIsSavingReview(false)
     }
@@ -141,6 +271,7 @@ export default function Dashboard() {
   async function analyzeSession() {
     setIsAnalyzing(true)
     setSessionAnalysis(null)
+    setAnalyzeError(null)
     try {
       const res = await fetch('/api/review', {
         method: 'POST',
@@ -148,10 +279,10 @@ export default function Dashboard() {
         body: JSON.stringify({ briefId, date: todayCT, ...review, action: 'analyze' }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      if (!res.ok) throw new Error(data.error || 'Analysis failed')
       setSessionAnalysis(data.analysis)
     } catch (e) {
-      alert('Analysis failed: ' + e.message)
+      setAnalyzeError(e.message)
     } finally {
       setIsAnalyzing(false)
     }
@@ -492,87 +623,13 @@ export default function Dashboard() {
             )}
 
             {/* Post-Session Review — only after 2 PM CT */}
-            {isAfterPM && (
-              <div className="card border-terminal-purple border p-6 space-y-4">
-                <p className="text-terminal-purple text-[10px] tracking-widest font-bold">◆ POST-SESSION REVIEW</p>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">WHAT ACTUALLY HAPPENED TODAY</label>
-                    <textarea
-                      value={review.notes}
-                      onChange={e => setReview(r => ({ ...r, notes: e.target.value }))}
-                      rows={4}
-                      placeholder="Describe what the market did, any catalysts that played out, how NQ moved..."
-                      className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple resize-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">RULES FOLLOWED / RULES BROKEN</label>
-                    <textarea
-                      value={review.rulesBroken}
-                      onChange={e => setReview(r => ({ ...r, rulesBroken: e.target.value }))}
-                      rows={3}
-                      placeholder="List any rules broken or followed perfectly today..."
-                      className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple resize-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL DAY TYPE (HINDSIGHT)</label>
-                      <select
-                        value={review.actualDayType}
-                        onChange={e => setReview(r => ({ ...r, actualDayType: e.target.value }))}
-                        className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-2 py-1.5 text-xs focus:outline-none focus:border-terminal-purple"
-                      >
-                        <option value="">Select...</option>
-                        {['A+', 'A', 'B', 'C', 'Missed Opportunity'].map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL NQ RANGE (PTS)</label>
-                      <input
-                        type="number"
-                        value={review.actualNQRange}
-                        onChange={e => setReview(r => ({ ...r, actualNQRange: e.target.value }))}
-                        placeholder="300"
-                        className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3">
-                    <button
-                      onClick={saveReview}
-                      disabled={isSavingReview}
-                      className="flex-1 py-2 bg-terminal-surface border border-terminal-purple text-terminal-purple text-xs font-bold tracking-widest hover:bg-terminal-purple/10 disabled:opacity-50"
-                    >
-                      {isSavingReview ? 'SAVING...' : reviewSaved ? '✓ REVIEW SAVED' : '◆ SAVE REVIEW'}
-                    </button>
-                    <button
-                      onClick={analyzeSession}
-                      disabled={isAnalyzing}
-                      className="flex-1 py-2 bg-terminal-purple text-white text-xs font-bold tracking-widest hover:bg-terminal-purple/90 disabled:opacity-50"
-                    >
-                      {isAnalyzing ? 'ANALYZING...' : '◆ ANALYZE SESSION'}
-                    </button>
-                  </div>
-                </div>
-
-                {sessionAnalysis && (
-                  <div className="border-t border-terminal-border pt-4 space-y-3">
-                    <p className="text-terminal-purple text-[10px] tracking-widest font-bold">SESSION ANALYSIS</p>
-                    {sessionAnalysis.split('\n').filter(p => p.trim()).map((p, i) => (
-                      <p key={i} className="text-terminal-text text-sm leading-relaxed">{p}</p>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            {isAfterPM && <PostSessionReview
+              review={review} setReview={setReview}
+              isSavingReview={isSavingReview} reviewSaved={reviewSaved} reviewError={reviewError}
+              isAnalyzing={isAnalyzing} sessionAnalysis={sessionAnalysis} analyzeError={analyzeError}
+              saveReview={saveReview} analyzeSession={analyzeSession}
+              todayCT={todayCT}
+            />}
 
           </div>
         )}
@@ -590,56 +647,13 @@ export default function Dashboard() {
               />
             </div>
             <AccountMonitor />
-            {isAfterPM && (
-              <div className="card border-terminal-purple border p-6 space-y-4">
-                <p className="text-terminal-purple text-[10px] tracking-widest font-bold">◆ POST-SESSION REVIEW</p>
-                <p className="text-terminal-muted text-xs">No brief was generated today — you can still log a manual review.</p>
-                <div className="space-y-3">
-                  <div>
-                    <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">WHAT ACTUALLY HAPPENED TODAY</label>
-                    <textarea
-                      value={review.notes}
-                      onChange={e => setReview(r => ({ ...r, notes: e.target.value }))}
-                      rows={4}
-                      placeholder="Describe what the market did..."
-                      className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple resize-none"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL DAY TYPE (HINDSIGHT)</label>
-                      <select
-                        value={review.actualDayType}
-                        onChange={e => setReview(r => ({ ...r, actualDayType: e.target.value }))}
-                        className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-2 py-1.5 text-xs focus:outline-none focus:border-terminal-purple"
-                      >
-                        <option value="">Select...</option>
-                        {['A+', 'A', 'B', 'C', 'Missed Opportunity'].map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-terminal-muted text-[9px] tracking-widest block mb-1">ACTUAL NQ RANGE (PTS)</label>
-                      <input
-                        type="number"
-                        value={review.actualNQRange}
-                        onChange={e => setReview(r => ({ ...r, actualNQRange: e.target.value }))}
-                        placeholder="300"
-                        className="w-full bg-terminal-bg border border-terminal-border text-terminal-text px-3 py-2 text-xs focus:outline-none focus:border-terminal-purple"
-                      />
-                    </div>
-                  </div>
-                  <button
-                    onClick={saveReview}
-                    disabled={isSavingReview || !briefId}
-                    className="w-full py-2 bg-terminal-surface border border-terminal-purple text-terminal-purple text-xs font-bold tracking-widest hover:bg-terminal-purple/10 disabled:opacity-50"
-                  >
-                    {isSavingReview ? 'SAVING...' : reviewSaved ? '✓ REVIEW SAVED' : '◆ SAVE REVIEW'}
-                  </button>
-                </div>
-              </div>
-            )}
+            {isAfterPM && <PostSessionReview
+              review={review} setReview={setReview}
+              isSavingReview={isSavingReview} reviewSaved={reviewSaved} reviewError={reviewError}
+              isAnalyzing={isAnalyzing} sessionAnalysis={sessionAnalysis} analyzeError={analyzeError}
+              saveReview={saveReview} analyzeSession={analyzeSession}
+              todayCT={todayCT} noBrief
+            />}
           </div>
         )}
 

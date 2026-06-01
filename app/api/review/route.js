@@ -2,10 +2,32 @@ import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import { supabase } from '@/lib/supabase'
 
+async function findOrCreateBriefRecord(briefId, date, createIfMissing = false) {
+  if (briefId) {
+    const { data } = await supabase.from('daily_briefs').select('*').eq('id', briefId).single()
+    if (data) return { record: data, created: false }
+  }
+  if (date) {
+    const { data } = await supabase
+      .from('daily_briefs').select('*').eq('brief_date', date)
+      .order('created_at', { ascending: false }).limit(1).single()
+    if (data) return { record: data, created: false }
+  }
+  if (createIfMissing && date) {
+    const { data: inserted, error } = await supabase
+      .from('daily_briefs')
+      .insert({ brief_date: date, day_type: null, full_brief: null, data_source: 'manual_review' })
+      .select('*').single()
+    if (error) throw new Error(error.message)
+    return { record: inserted, created: true }
+  }
+  return { record: null, created: false }
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { briefId, date, notes, rulesBroken, actualDayType, actualNQRange, action } = body
+    const { briefId, date, notes, rulesBroken, rulesFollowed, actualDayType, actualNQRange, action } = body
 
     if (action === 'analyze') {
       const anthropicKey = process.env.ANTHROPIC_API_KEY
@@ -13,17 +35,8 @@ export async function POST(request) {
         return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 400 })
       }
 
-      // Fetch brief record
-      let briefRecord = null
-      if (briefId) {
-        const { data } = await supabase.from('daily_briefs').select('*').eq('id', briefId).single()
-        briefRecord = data
-      } else if (date) {
-        const { data } = await supabase
-          .from('daily_briefs').select('*').eq('brief_date', date)
-          .order('created_at', { ascending: false }).limit(1).single()
-        briefRecord = data
-      }
+      // Find or create a brief record so we have somewhere to save the analysis
+      const { record: briefRecord } = await findOrCreateBriefRecord(briefId, date, true)
 
       // Fetch today's trades
       const { data: trades } = await supabase
@@ -34,7 +47,7 @@ export async function POST(request) {
       const analysisPrompt = `You are analyzing a trading day for a MNQ/NQ futures trader using the ZEXTER system.
 
 MORNING BRIEF PREDICTED:
-Day Type: ${briefRecord?.day_type || 'Unknown'}
+Day Type: ${briefRecord?.day_type || 'No brief generated — manual review only'}
 Reason: ${briefRecord?.day_type_reason || 'N/A'}
 Primary Catalyst: ${JSON.stringify(briefRecord?.primary_catalyst || {})}
 Full Brief: ${briefRecord?.full_brief || 'N/A'}
@@ -44,6 +57,7 @@ ${JSON.stringify(trades || [], null, 2)}
 
 POST-SESSION NOTES FROM TRADER:
 What happened: ${notes || 'N/A'}
+Rules followed: ${rulesFollowed === true ? 'YES' : rulesFollowed === false ? 'NO' : 'Not specified'}
 Rules broken: ${rulesBroken || 'None reported'}
 Actual day type (in hindsight): ${actualDayType || 'N/A'}
 Actual NQ range: ${actualNQRange || 'N/A'} pts
@@ -65,40 +79,36 @@ Keep the response to 4-5 focused paragraphs. Be direct and actionable.`
 
       const analysis = response.content.find(b => b.type === 'text')?.text || ''
 
-      // Save analysis back to brief record
-      const targetId = briefId || briefRecord?.id
-      if (targetId) {
-        await supabase.from('daily_briefs').update({ post_session_analysis: analysis }).eq('id', targetId)
+      if (briefRecord?.id) {
+        await supabase.from('daily_briefs').update({ post_session_analysis: analysis }).eq('id', briefRecord.id)
       }
 
       return NextResponse.json({ analysis })
     }
 
-    // Save review fields to daily_briefs
+    // Save review — find existing record or INSERT a new one if none exists
+    const { record, created } = await findOrCreateBriefRecord(briefId, date, true)
+
     const updateData = {
       post_session_notes: notes || null,
       rules_broken: rulesBroken || null,
       actual_day_type: actualDayType || null,
       actual_nq_range: actualNQRange ? parseFloat(actualNQRange) : null,
-      rules_followed: !rulesBroken || rulesBroken.trim() === '',
+      rules_followed: typeof rulesFollowed === 'boolean'
+        ? rulesFollowed
+        : (!rulesBroken || rulesBroken.trim() === ''),
     }
 
-    let targetId = briefId
-    if (!targetId && date) {
-      const { data } = await supabase
-        .from('daily_briefs').select('id').eq('brief_date', date)
-        .order('created_at', { ascending: false }).limit(1).single()
-      targetId = data?.id
+    if (created) {
+      // Already inserted — just update with the review fields
+      const { error } = await supabase.from('daily_briefs').update(updateData).eq('id', record.id)
+      if (error) throw new Error(error.message)
+    } else {
+      const { error } = await supabase.from('daily_briefs').update(updateData).eq('id', record.id)
+      if (error) throw new Error(error.message)
     }
 
-    if (!targetId) {
-      return NextResponse.json({ error: 'No brief found for this date' }, { status: 404 })
-    }
-
-    const { error } = await supabase.from('daily_briefs').update(updateData).eq('id', targetId)
-    if (error) throw new Error(error.message)
-
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, id: record.id })
   } catch (err) {
     console.error('Review error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
