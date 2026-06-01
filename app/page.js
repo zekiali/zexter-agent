@@ -239,6 +239,39 @@ export default function Dashboard() {
               <WarningFlags flags={brief.warningFlags} />
             )}
 
+            {/* MAG7 Earnings Alert */}
+            {brief.mag7EarningsAlert && (
+              <div className="card border-terminal-gold border-l-4 border p-5 glow-gold">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-terminal-gold text-xs font-bold tracking-widest">◆ MAG7 EARNINGS ALERT</span>
+                  <span className="text-terminal-gold/50 text-[9px] bg-terminal-gold/10 px-2 py-0.5">A+ SETUP POTENTIAL</span>
+                </div>
+                <p className="text-terminal-text text-sm leading-relaxed">{brief.mag7EarningsAlert}</p>
+              </div>
+            )}
+
+            {/* OpEx Alert */}
+            {brief.opexAlert && (
+              <div className="card border-terminal-cyan border-l-4 border p-5 glow-cyan">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-terminal-cyan text-xs font-bold tracking-widest">◈ OPTIONS EXPIRATION DAY</span>
+                  <span className="text-terminal-cyan/50 text-[9px] bg-terminal-cyan/10 px-2 py-0.5">B-DAY TREATMENT</span>
+                </div>
+                <p className="text-terminal-text text-sm leading-relaxed">{brief.opexAlert}</p>
+              </div>
+            )}
+
+            {/* Geopolitical Alert */}
+            {brief.geopoliticalAlert && (
+              <div className="card border-terminal-red border-l-4 border p-5 glow-red">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-terminal-red text-xs font-bold tracking-widest">⚠ GEOPOLITICAL/MACRO ALERT</span>
+                  <span className="text-terminal-red/50 text-[9px] bg-terminal-red/10 px-2 py-0.5">UNSCHEDULED</span>
+                </div>
+                <p className="text-terminal-text text-sm leading-relaxed">{brief.geopoliticalAlert}</p>
+              </div>
+            )}
+
             {/* Day Type + Brief Text */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <DayTypeCard

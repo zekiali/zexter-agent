@@ -83,15 +83,20 @@ function CatalystCard({ catalyst }) {
   const sc = sentimentConfig[sentiment] || null
 
   const tierLabel = {
-    tier1:       { text: 'TIER 1',       color: 'text-terminal-gold' },
-    tier2:       { text: 'TIER 2',       color: 'text-terminal-cyan' },
-    fomc:        { text: 'FOMC',         color: 'text-terminal-purple' },
-    fed_minutes: { text: 'FED MINUTES',  color: 'text-terminal-purple' },
-    fed_speaker: { text: 'FED SPEAKER',  color: 'text-purple-400' },
-    opex:        { text: 'OPEX',         color: 'text-terminal-orange' },
-    mag7:        { text: 'MAG7',         color: 'text-terminal-green' },
-    tier3:       { text: 'TIER 3',       color: 'text-terminal-muted' },
-    none:        { text: 'NO CATALYST',  color: 'text-terminal-muted' },
+    tier1:            { text: 'TIER 1',       color: 'text-terminal-gold' },
+    tier2:            { text: 'TIER 2',       color: 'text-terminal-cyan' },
+    tier2_econ:       { text: 'TIER 2 ECON',  color: 'text-terminal-cyan' },
+    tier2_fed:        { text: 'TIER 2 FED',   color: 'text-terminal-purple' },
+    fomc:             { text: 'FOMC',         color: 'text-terminal-purple' },
+    fed_minutes:      { text: 'FED MINUTES',  color: 'text-terminal-purple' },
+    fed_speaker:      { text: 'FED SPEAKER',  color: 'text-purple-400' },
+    tier3_opex:       { text: 'OPEX',         color: 'text-terminal-orange' },
+    opex:             { text: 'OPEX',         color: 'text-terminal-orange' },
+    tier3_earnings:   { text: 'MAG7',         color: 'text-terminal-green' },
+    mag7:             { text: 'MAG7',         color: 'text-terminal-green' },
+    tier4_geo:        { text: 'GEOPOLITICAL', color: 'text-terminal-red' },
+    tier3:            { text: 'TIER 3',       color: 'text-terminal-muted' },
+    none:             { text: 'NO CATALYST',  color: 'text-terminal-muted' },
   }[catalyst.impactLevel] || { text: '—', color: 'text-terminal-muted' }
 
   return (

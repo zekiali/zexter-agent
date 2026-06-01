@@ -81,9 +81,17 @@ export default function AccountMonitor() {
       </div>
 
       {loading ? (
-        <p className="text-terminal-muted text-xs">Loading accounts...</p>
+        <div className="flex items-center gap-2 py-2">
+          <div className="w-3 h-3 border border-terminal-gold/40 border-t-terminal-gold rounded-full animate-spin" />
+          <p className="text-terminal-muted text-xs">Loading accounts...</p>
+        </div>
       ) : accounts.length === 0 ? (
-        <p className="text-terminal-muted text-xs text-center py-4">No account snapshots yet</p>
+        <div className="text-center py-6 space-y-2">
+          <p className="text-terminal-muted text-xs">No account snapshots yet</p>
+          <p className="text-terminal-muted/60 text-[10px]">
+            Click <span className="text-terminal-gold">+ SNAPSHOT</span> to add your first Apex account
+          </p>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-xs">

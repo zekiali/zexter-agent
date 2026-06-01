@@ -1,5 +1,11 @@
 import { NextResponse } from 'next/server'
-import { parseFinnhubEvents, parseMag7Earnings, MAG7_SYMBOLS } from '@/lib/calendarUtils'
+import {
+  parseFinnhubEvents,
+  parseMag7Earnings,
+  MAG7_SYMBOLS,
+  isThirdFriday,
+  buildOpExEvent,
+} from '@/lib/calendarUtils'
 
 export async function GET() {
   const finnhubKey = process.env.FINNHUB_KEY
@@ -21,7 +27,7 @@ export async function GET() {
   }).format(tomorrow)
 
   try {
-    // Fetch economic calendar and Mag7 earnings calendar in parallel
+    // Fetch economic calendar + Mag7 earnings calendar in parallel
     const [econRes, earningsRes] = await Promise.all([
       fetch(
         `https://finnhub.io/api/v1/calendar/economic?from=${etDate}&to=${etTomorrow}&token=${finnhubKey}`,
@@ -44,17 +50,29 @@ export async function GET() {
     const rawEcon = econData.economicCalendar || econData || []
     const econEvents = parseFinnhubEvents(rawEcon, etDate)
 
-    // Earnings: parse only if request succeeded
+    // Parse Mag7 earnings if available
     let earningsEvents = []
+    let mag7RawData = []
     if (earningsRes.ok) {
       const earningsData = await earningsRes.json()
-      const rawEarnings = earningsData.earningsCalendar || []
-      earningsEvents = parseMag7Earnings(rawEarnings, etDate)
+      mag7RawData = earningsData.earningsCalendar || []
+      earningsEvents = parseMag7Earnings(mag7RawData, etDate)
     }
 
-    // Merge and sort: Mag7 earnings go to top alongside tier1
-    const allEvents = [...earningsEvents, ...econEvents].sort((a, b) => {
-      const tierOrder = { mag7: 0, fomc: 1, tier1: 2, fed_minutes: 3, fed_speaker: 4, opex: 5, tier2: 6, tier3: 7 }
+    // Auto-inject OpEx event if today is the 3rd Friday of the month
+    const opexEvents = []
+    if (isThirdFriday(etDate)) {
+      opexEvents.push(buildOpExEvent(etDate))
+    }
+
+    // Tier priority order for sorting
+    const tierOrder = {
+      mag7: 0, fomc: 1, tier1: 2,
+      fed_minutes: 3, fed_speaker: 4,
+      opex: 5, tier2: 6, tier3: 7,
+    }
+
+    const allEvents = [...earningsEvents, ...opexEvents, ...econEvents].sort((a, b) => {
       const ta = tierOrder[a.tier] ?? 8
       const tb = tierOrder[b.tier] ?? 8
       if (ta !== tb) return ta - tb
@@ -67,6 +85,7 @@ export async function GET() {
       events: allEvents,
       fetchedAt: new Date().toISOString(),
       tradingDate: etDate,
+      isOpExDay: opexEvents.length > 0,
       mag7Today: earningsEvents.map(e => e.symbol),
     })
   } catch (err) {

@@ -6,9 +6,11 @@ import { usePathname } from 'next/navigation'
 export default function Header({ onSettingsToggle, onGenerateBrief, isGenerating }) {
   const [time, setTime] = useState('')
   const [date, setDate] = useState('')
+  const [mounted, setMounted] = useState(false)
   const pathname = usePathname()
 
   useEffect(() => {
+    setMounted(true)
     function tick() {
       const now = new Date()
       setTime(now.toLocaleTimeString('en-US', {
@@ -70,14 +72,20 @@ export default function Header({ onSettingsToggle, onGenerateBrief, isGenerating
           </nav>
         </div>
 
-        {/* Center: Clock */}
+        {/* Center: Clock — only rendered after mount to avoid hydration flash */}
         <div className="flex flex-col items-center min-w-[160px]">
-          <div className="font-display text-terminal-gold text-2xl tracking-widest leading-none">
-            {time || '--:--:--'}
-          </div>
-          <div className="text-terminal-muted text-[10px] tracking-wider mt-0.5">
-            {date || '---'} CT
-          </div>
+          {mounted ? (
+            <>
+              <div className="font-display text-terminal-gold text-2xl tracking-widest leading-none">
+                {time}
+              </div>
+              <div className="text-terminal-muted text-[10px] tracking-wider mt-0.5">
+                {date} CT
+              </div>
+            </>
+          ) : (
+            <div className="h-8" />
+          )}
         </div>
 
         {/* Right: Buttons */}
