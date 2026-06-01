@@ -74,6 +74,13 @@ IMPORTANT:
 - If today is 3rd Friday of month, flag as OpEx day with B+ treatment.
 - If Mag7 reported earnings last night with significant surprise, upgrade to A or A+ day.
 
+WHEN WEB SEARCH IS USED INSTEAD OF FINNHUB CALENDAR:
+- ForexFactory and Investing.com are most reliable for consensus estimates
+- BLS.gov and ISMWorld.org are ground truth for official government releases
+- Barchart.com has the most accurate overnight NQ futures context
+- Always search for ISM consensus specifically on first Monday of each month
+- Always search for CPI/PPI consensus specifically on release days (check ForexFactory for dates)
+
 Return VALID JSON ONLY — no markdown, no backticks:
 {
   "dayType": "A+|A|B|C|F",
@@ -142,7 +149,29 @@ export async function POST(request) {
 
     const calendarText = calendarEvents.length > 0
       ? `\n\nTODAY'S ECONOMIC + EARNINGS CALENDAR (already fetched from Finnhub — do NOT search for this):\n${JSON.stringify(calendarEvents, null, 2)}`
-      : "\n\nNo calendar data was pre-fetched. Search the web for today's complete US economic calendar including all releases, times, consensus estimates, and prior values. Also search for NQ overnight performance."
+      : `\n\nFinnhub returned no calendar data. Search for today's economic data using these specific sources:
+
+1. Search: 'site:forexfactory.com economic calendar ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}' — get all US releases today with consensus and prior values
+
+2. Search: 'site:ismworld.org ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026 manufacturing PMI' if today is first Monday of month
+
+3. Search: 'site:bls.gov ${new Date().toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'long' })} 2026' if CPI, PPI, or NFP expected today
+
+4. Search: 'NQ futures overnight ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })} barchart' for precise overnight performance
+
+5. Search: 'site:federalreserve.gov FOMC calendar 2026' to confirm upcoming Fed meeting dates
+
+6. Search: 'site:cmegroup.com fedwatch' for current Fed rate cut probability
+
+Extract from these searches:
+- Every US economic release today with exact time (ET and CT)
+- Consensus estimate for each release
+- Prior value for each release
+- Actual value if already released
+- NQ overnight range and current price
+- Any active geopolitical headlines affecting markets
+
+Return all of this as structured data in the JSON response.`
 
     const userMessage = `Generate a pre-market intelligence brief for MNQ/NQ trading.
 Date: ${date || new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' })}
